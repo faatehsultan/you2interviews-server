@@ -5,6 +5,7 @@ const fs = require("fs");
 const AWS = require("aws-sdk");
 const multer = require("multer");
 const path = require("path");
+const { getTokenWithUID, getActiveChannelsList } = require("./services");
 
 require("dotenv").config();
 
@@ -114,6 +115,23 @@ app.get("/search", (req, res) => {
     const recordings = data.Contents.filter((item) => item.Key.includes(query));
     res.status(200).json({ recordings });
   });
+});
+
+// TOKEN SERVER ROUTES
+app.get("/api/agora/token/new/", async (req, res) => {
+  const { uid, channel, role } = req.query;
+
+  console.log("uid:", uid, "channel:", channel, "role:", role);
+  const { token, is_host } = await getTokenWithUID(uid, channel, role);
+
+  res.status(200).json({ token, is_host });
+});
+
+app.get("/api/agora/channel/list", async (req, res) => {
+  const channelList = await getActiveChannelsList();
+
+  console.log("channelList:", channelList);
+  res.status(200).json({ channels: channelList });
 });
 
 server.listen(3000, () => {
