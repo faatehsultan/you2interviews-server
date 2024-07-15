@@ -1,6 +1,13 @@
-const AGORA_CHANNEL_LIST_ENDPOINT =
-  "http://api.sd-rtn.com/dev/v1/channel/APP_ID?page_size=500";
+const AGORA_TOKEN_EXPIRY_SECONDS = 3600 * 24;
+
+const AGORA_BASE_URL = "https://api.sd-rtn.com";
+
+const AGORA_CHANNEL_LIST_ENDPOINT = `${AGORA_BASE_URL}/dev/v1/channel/APP_ID?page_size=500`;
+
+const AGORA_REQUEST_RECORDING_ENDPOINT = `${AGORA_BASE_URL}/v1/apps/APP_ID/cloud_recording/acquire`;
 
 module.exports = {
+  AGORA_TOKEN_EXPIRY_SECONDS,
   AGORA_CHANNEL_LIST_ENDPOINT,
+  AGORA_REQUEST_RECORDING_ENDPOINT,
 };
