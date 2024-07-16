@@ -7,7 +7,7 @@ const {
   AGORA_START_RECORDING_ENDPOINT,
   AGORA_STOP_RECORDING_ENDPOINT,
 } = require("./constants");
-
+const { sendEmail } = require("./mailer");
 const RtcTokenBuilder =
   require("./agoraTokenLib/RtcTokenBuilder2").RtcTokenBuilder;
 const RtcRole = require("./agoraTokenLib/RtcTokenBuilder2").Role;
@@ -327,10 +327,26 @@ const stopCloudRecording = async (resourceId, channelName, sid, uid) => {
   }
 };
 
+const sendOtpViaEmail = async (email, otp) => {
+  try {
+    const res = await sendEmail(
+      [email],
+      "Verify Your Email - You2Interviews",
+      `Your email verification OTP is: ${otp}`
+    );
+
+    return res;
+  } catch (error) {
+    console.error(error);
+    return null;
+  }
+};
+
 module.exports = {
   getTokenWithUID,
   getActiveChannelsList,
   requestCloudRecording,
   startCloudRecording,
   stopCloudRecording,
+  sendOtpViaEmail,
 };

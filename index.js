@@ -9,6 +9,7 @@ const {
   requestCloudRecording,
   startCloudRecording,
   stopCloudRecording,
+  sendOtpViaEmail,
 } = require("./services");
 const { SWAGGER_OPTIONS } = require("./constants");
 require("dotenv").config();
@@ -30,7 +31,37 @@ app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpecs));
 
 /**
  * @swagger
- * /api/agora/token/new/:
+ * /api/email/otp/send:
+ *   get:
+ *     summary: Send OTP via Email
+ *     parameters:
+ *       - in: query
+ *         name: email
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: otp
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: A JSON object containing the token and host status
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ */
+app.get("/api/email/otp/send", async (req, res) => {
+  const { email, otp } = req.query;
+  const info = await sendOtpViaEmail(email, otp);
+  res.status(200).json(info);
+});
+
+/**
+ * @swagger
+ * /api/agora/token/new:
  *   get:
  *     summary: Get a new token
  *     parameters:
@@ -52,7 +83,7 @@ app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpecs));
  *                 is_host:
  *                   type: boolean
  */
-app.get("/api/agora/token/new/", async (req, res) => {
+app.get("/api/agora/token/new", async (req, res) => {
   const { uid, channel, role } = req.query;
   const { token, is_host } = await getTokenWithUID(uid, channel, role);
   res.status(200).json({ token, is_host });
