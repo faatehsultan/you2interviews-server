@@ -4,6 +4,8 @@ const {
   AGORA_CHANNEL_LIST_ENDPOINT,
   AGORA_REQUEST_RECORDING_ENDPOINT,
   AGORA_TOKEN_EXPIRY_SECONDS,
+  AGORA_START_RECORDING_ENDPOINT,
+  AGORA_STOP_RECORDING_ENDPOINT,
 } = require("./constants");
 
 const RtcTokenBuilder =
@@ -82,7 +84,7 @@ const getActiveChannelsList = async () => {
   }
 };
 
-const requestCloudRecording = async (channelName) => {
+const requestCloudRecording = async (channelName, token, uid) => {
   const url = AGORA_REQUEST_RECORDING_ENDPOINT.replace("APP_ID", appId);
 
   const encodedCredential =
@@ -99,8 +101,216 @@ const requestCloudRecording = async (channelName) => {
     },
     body: JSON.stringify({
       cname: channelName,
-      uid: "0",
-      clientRequest: {},
+      uid: uid,
+      clientRequest: {
+        // token: token,
+        scene: 0,
+        region: "EU",
+        resourceExpiredHour: 72,
+        startParameter: {
+          token: token,
+          storageConfig: {
+            vendor: 1,
+            region: 25,
+            bucket: process.env.AWS_S3_BUCKET_NAME,
+            accessKey: process.env.AWS_ACCESS_KEY_ID,
+            secretKey: process.env.AWS_SECRET_ACCESS_KEY,
+            // fileNamePrefix: ["directory1", "directory2"],
+          },
+          recordingConfig: {
+            channelType: 0,
+            decryptionMode: 0,
+            streamTypes: 0,
+            subscribeAudioUids: ["#allstream#"],
+            subscribeUidGroup: 1,
+            streamMode: "original",
+          },
+          recordingFileConfig: {
+            avFileType: ["hls"],
+          },
+          // extensionServiceConfig: {
+          //   errorHandlePolicy: "error_abort",
+          //   extensionServices: [
+          //     {
+          //       serviceName: "string",
+          //       errorHandlePolicy: "string",
+          //       serviceParam: {
+          //         url: "string",
+          //         audioProfile: 0,
+          //         videoWidth: 240,
+          //         videoHeight: 240,
+          //         maxRecordingHour: 1,
+          //         videoBitrate: 0,
+          //         videoFps: 15,
+          //         mobile: false,
+          //         maxVideoDuration: 120,
+          //         onhold: false,
+          //         readyTimeout: 0,
+          //       },
+          //     },
+          //   ],
+          // },
+          appsCollection: {
+            combinationPolicy: "default",
+          },
+          transcodeOptions: {
+            transConfig: {
+              transMode: "audioMix",
+            },
+            container: {
+              format: "mp3",
+            },
+            audio: {
+              sampleRate: "48000",
+              bitrate: "48000",
+              channels: "2",
+            },
+          },
+        },
+      },
+    }),
+  };
+  try {
+    const response = await fetch(url, options);
+    const data = await response.json();
+
+    console.log(response);
+    console.log(data);
+    console.log(response.status, response.statusText);
+
+    return data;
+  } catch (error) {
+    console.error(error);
+  }
+};
+
+const startCloudRecording = async (resourceId, channelName, token, uid) => {
+  const url = AGORA_START_RECORDING_ENDPOINT.replace("APP_ID", appId).replace(
+    "RESOURCE_ID",
+    resourceId
+  );
+
+  const encodedCredential =
+    "Basic " +
+    Buffer.from(
+      process.env.AGORA_REST_KEY + ":" + process.env.AGORA_REST_SECRET
+    ).toString("base64");
+
+  const options = {
+    method: "POST",
+    headers: {
+      Authorization: encodedCredential,
+      "Content-Type": "application/json;charset=utf-8",
+    },
+    body: JSON.stringify({
+      cname: channelName,
+      uid: uid,
+      clientRequest: {
+        token: token,
+        scene: 0,
+        region: "EU",
+        resourceExpiredHour: 72,
+        startParameter: {
+          token: token,
+          storageConfig: {
+            vendor: 1,
+            region: 25,
+            bucket: process.env.AWS_S3_BUCKET_NAME,
+            accessKey: process.env.AWS_ACCESS_KEY_ID,
+            secretKey: process.env.AWS_SECRET_ACCESS_KEY,
+            // fileNamePrefix: ["directory1", "directory2"],
+          },
+          recordingConfig: {
+            channelType: 0,
+            decryptionMode: 0,
+            streamTypes: 0,
+            subscribeAudioUids: ["#allstream#"],
+            subscribeUidGroup: 1,
+            streamMode: "original",
+          },
+          recordingFileConfig: {
+            avFileType: ["hls"],
+          },
+          // extensionServiceConfig: {
+          //   errorHandlePolicy: "error_abort",
+          //   extensionServices: [
+          //     {
+          //       serviceName: "string",
+          //       errorHandlePolicy: "string",
+          //       serviceParam: {
+          //         url: "string",
+          //         audioProfile: 0,
+          //         videoWidth: 240,
+          //         videoHeight: 240,
+          //         maxRecordingHour: 1,
+          //         videoBitrate: 0,
+          //         videoFps: 15,
+          //         mobile: false,
+          //         maxVideoDuration: 120,
+          //         onhold: false,
+          //         readyTimeout: 0,
+          //       },
+          //     },
+          //   ],
+          // },
+          appsCollection: {
+            combinationPolicy: "default",
+          },
+          transcodeOptions: {
+            transConfig: {
+              transMode: "audioMix",
+            },
+            container: {
+              format: "mp3",
+            },
+            audio: {
+              sampleRate: "48000",
+              bitrate: "48000",
+              channels: "2",
+            },
+          },
+        },
+      },
+    }),
+  };
+  try {
+    console.log("stuff>>>>", options, url);
+    const response = await fetch(url, options);
+    const data = await response.json();
+
+    console.log(response);
+    console.log(data);
+    console.log(response.status, response.statusText);
+
+    return data;
+  } catch (error) {
+    console.error(error);
+  }
+};
+
+const stopCloudRecording = async (resourceId, channelName, sid, uid) => {
+  const url = AGORA_STOP_RECORDING_ENDPOINT.replace("APP_ID", appId)
+    .replace("RESOURCE_ID", resourceId)
+    .replace("SID", sid);
+
+  const encodedCredential =
+    "Basic " +
+    Buffer.from(
+      process.env.AGORA_REST_KEY + ":" + process.env.AGORA_REST_SECRET
+    ).toString("base64");
+
+  const options = {
+    method: "POST",
+    headers: {
+      Authorization: encodedCredential,
+      "Content-Type": "application/json;charset=utf-8",
+    },
+    body: JSON.stringify({
+      cname: channelName,
+      uid: uid,
+      clientRequest: {
+        async_stop: false,
+      },
     }),
   };
   try {
@@ -121,4 +331,6 @@ module.exports = {
   getTokenWithUID,
   getActiveChannelsList,
   requestCloudRecording,
+  startCloudRecording,
+  stopCloudRecording,
 };
