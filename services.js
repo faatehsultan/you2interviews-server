@@ -369,7 +369,7 @@ const addNewChannel = async (channelName, hostUid) => {
   try {
     const res = await db.collection("channels").add({
       title: channelName,
-      createdAt: new Date(),
+      createdAt: new Date().toUTCString(),
       hostUid: hostUid,
     });
     if (res) {
