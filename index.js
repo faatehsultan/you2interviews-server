@@ -10,6 +10,7 @@ const {
   startCloudRecording,
   stopCloudRecording,
   listAllUsers,
+  addNewChannel,
 } = require("./services");
 const { SWAGGER_OPTIONS } = require("./constants");
 require("dotenv").config();
@@ -256,7 +257,37 @@ app.get("/api/agora/recording/stop", async (req, res) => {
  */
 app.get("/api/users/list", async (req, res) => {
   const data = await listAllUsers();
-  console.log("LIST ALL USERS: ", data);
+
+  res.status(200).json(data);
+});
+
+/**
+ * @swagger
+ * /api/channel/new:
+ *   get:
+ *     summary: Register new channel from agora to firebase database
+ *     parameters:
+ *       - in: query
+ *         name: channel
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: uid
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ */
+app.get("/api/channel/new/", async (req, res) => {
+  const { channel, uid } = req.query;
+
+  const data = await addNewChannel(channel, uid);
 
   res.status(200).json(data);
 });

@@ -7,7 +7,7 @@ const {
   AGORA_START_RECORDING_ENDPOINT,
   AGORA_STOP_RECORDING_ENDPOINT,
 } = require("./constants");
-const { auth } = require("./firebase-config");
+const { auth, db } = require("./firebase-config");
 const RtcTokenBuilder =
   require("./agoraTokenLib/RtcTokenBuilder2").RtcTokenBuilder;
 const RtcRole = require("./agoraTokenLib/RtcTokenBuilder2").Role;
@@ -54,7 +54,7 @@ const getTokenWithUID = async (uid = 0, channelName = "*", role = "pub") => {
 
   let is_host = true;
 
-  if (channelList.includes(channelName)) is_host = false;
+  if (channelList?.includes(channelName)) is_host = false;
 
   return { token: resToken, is_host };
 };
@@ -73,12 +73,27 @@ const getActiveChannelsList = async () => {
     headers: { Authorization: encodedCredential, Accept: "application/json" },
   };
   try {
-    const response = await fetch(url, options);
-    const data = await response.json();
+    let response = await fetch(url, options);
+    const agoraData = await response.json();
 
-    console.log(data);
+    response = await db.collection("channels").get();
+    const firebaseData = await response.docs.map((doc) => ({
+      ...doc.data(),
+      channel_name: doc.id,
+    }));
 
-    return data;
+    const resultant = [];
+
+    firebaseData?.forEach((channel) => {
+      const elem = agoraData?.data?.channels?.find(
+        (c) => c.channel_name === channel.channel_name
+      );
+      if (elem) {
+        resultant.push({ ...channel, ...elem });
+      }
+    });
+
+    return resultant;
   } catch (error) {
     console.error(error);
   }
@@ -350,6 +365,24 @@ const listAllUsers = async (nextPageToken) => {
   }
 };
 
+const addNewChannel = async (channelName, hostUid) => {
+  try {
+    const res = await db.collection("channels").add({
+      title: channelName,
+      createdAt: new Date(),
+      hostUid: hostUid,
+    });
+    if (res) {
+      return res.id;
+    } else {
+      return null;
+    }
+  } catch (error) {
+    console.log("Error creating channel:", error);
+    return null;
+  }
+};
+
 module.exports = {
   getTokenWithUID,
   getActiveChannelsList,
@@ -357,4 +390,5 @@ module.exports = {
   startCloudRecording,
   stopCloudRecording,
   listAllUsers,
+  addNewChannel,
 };
