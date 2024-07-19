@@ -7,7 +7,7 @@ const {
   AGORA_START_RECORDING_ENDPOINT,
   AGORA_STOP_RECORDING_ENDPOINT,
 } = require("./constants");
-const { sendEmail } = require("./mailer");
+const { auth } = require("./firebase-config");
 const RtcTokenBuilder =
   require("./agoraTokenLib/RtcTokenBuilder2").RtcTokenBuilder;
 const RtcRole = require("./agoraTokenLib/RtcTokenBuilder2").Role;
@@ -327,18 +327,26 @@ const stopCloudRecording = async (resourceId, channelName, sid, uid) => {
   }
 };
 
-const sendOtpViaEmail = async (email, otp) => {
+const listAllUsers = async (nextPageToken) => {
   try {
-    const res = await sendEmail(
-      [email],
-      "Verify Your Email - You2Interviews",
-      `Your email verification OTP is: ${otp}`
-    );
-
-    return res;
+    const listUsersResult = await auth.listUsers(1000, nextPageToken);
+    const users = listUsersResult.users.map((userRecord) => ({
+      uid: userRecord.uid,
+      displayName: userRecord.displayName,
+      email: userRecord.email,
+      emailVerified: userRecord.emailVerified,
+      disabled: userRecord.disabled,
+      photoURL: userRecord.photoURL,
+    }));
+    if (listUsersResult.pageToken) {
+      // List next batch of users.
+      const nextUsers = await listAllUsers(listUsersResult.pageToken);
+      return users.concat(nextUsers);
+    }
+    return users;
   } catch (error) {
-    console.error(error);
-    return null;
+    console.log("Error listing users:", error);
+    return [];
   }
 };
 
@@ -348,5 +356,5 @@ module.exports = {
   requestCloudRecording,
   startCloudRecording,
   stopCloudRecording,
-  sendOtpViaEmail,
+  listAllUsers,
 };

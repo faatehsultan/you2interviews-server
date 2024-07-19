@@ -9,7 +9,7 @@ const {
   requestCloudRecording,
   startCloudRecording,
   stopCloudRecording,
-  sendOtpViaEmail,
+  listAllUsers,
 } = require("./services");
 const { SWAGGER_OPTIONS } = require("./constants");
 require("dotenv").config();
@@ -28,36 +28,6 @@ app.get("/", (req, res) => {
 });
 
 app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpecs));
-
-/**
- * @swagger
- * /api/email/otp/send:
- *   get:
- *     summary: Send OTP via Email
- *     parameters:
- *       - in: query
- *         name: email
- *         required: true
- *         schema:
- *           type: string
- *       - in: query
- *         name: otp
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: A JSON object containing the token and host status
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- */
-app.get("/api/email/otp/send", async (req, res) => {
-  const { email, otp } = req.query;
-  const info = await sendOtpViaEmail(email, otp);
-  res.status(200).json(info);
-});
 
 /**
  * @swagger
@@ -268,6 +238,26 @@ app.get("/api/agora/recording/stop", async (req, res) => {
 
   const data = await stopCloudRecording(resource_id, channel, sid, uid);
   console.log(data);
+  res.status(200).json(data);
+});
+
+/**
+ * @swagger
+ * /api/users/list:
+ *   get:
+ *     summary: Get All Users List
+ *     responses:
+ *       200:
+ *         description: A JSON object containing the list of users
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ */
+app.get("/api/users/list", async (req, res) => {
+  const data = await listAllUsers();
+  console.log("LIST ALL USERS: ", data);
+
   res.status(200).json(data);
 });
 
