@@ -1,3 +1,5 @@
+require("dotenv").config();
+
 const express = require("express");
 const http = require("http");
 const cors = require("cors");
@@ -13,7 +15,7 @@ const {
   addNewChannel,
 } = require("./services");
 const { SWAGGER_OPTIONS } = require("./constants");
-require("dotenv").config();
+const { alphanumericToNumericUID } = require("./utils");
 
 const app = express();
 const server = http.createServer(app);
@@ -41,6 +43,11 @@ app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpecs));
  *         required: true
  *         schema:
  *           type: string
+ *       - in: query
+ *         name: uid
+ *         required: true
+ *         schema:
+ *           type: string
  *     responses:
  *       200:
  *         description: A JSON object containing the token and host status
@@ -55,9 +62,13 @@ app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpecs));
  *                   type: boolean
  */
 app.get("/api/agora/token/new", async (req, res) => {
-  const { uid, channel, role } = req.query;
-  const { token, is_host } = await getTokenWithUID(uid, channel, role);
-  res.status(200).json({ token, is_host });
+  const { uid, channel } = req.query;
+
+  const _uid = alphanumericToNumericUID(uid);
+
+  const data = await getTokenWithUID(_uid, channel);
+  console.log("data:", { ...data, uid: _uid });
+  res.status(200).json({ ...data, uid: _uid });
 });
 
 /**
@@ -80,7 +91,6 @@ app.get("/api/agora/token/new", async (req, res) => {
  */
 app.get("/api/agora/channel/list", async (req, res) => {
   const channelList = await getActiveChannelsList();
-  console.log("channelList:", channelList);
   res.status(200).json({ channels: channelList });
 });
 
@@ -127,9 +137,11 @@ app.get("/api/agora/recording/request", async (req, res) => {
   if (!channel || !token || !uid)
     return res.status(400).json({ error: "Missing channel or token or uid" });
 
-  const data = await requestCloudRecording(channel, token, uid);
-  console.log(data);
-  res.status(200).json(data);
+  const _uid = alphanumericToNumericUID(uid);
+
+  const data = await requestCloudRecording(channel, token, _uid);
+  console.log("data:", { ...data, uid: _uid });
+  res.status(200).json({ ...data, uid: _uid });
 });
 
 /**
@@ -182,9 +194,11 @@ app.get("/api/agora/recording/start", async (req, res) => {
       .status(400)
       .json({ error: "Missing channel or resource_id or token or uid" });
 
-  const data = await startCloudRecording(resource_id, channel, token, uid);
-  console.log(data);
-  res.status(200).json(data);
+  const _uid = alphanumericToNumericUID(uid);
+
+  const data = await startCloudRecording(resource_id, channel, token, _uid);
+  console.log("data:", { ...data, uid: _uid });
+  res.status(200).json({ ...data, uid: _uid });
 });
 
 /**
@@ -237,9 +251,11 @@ app.get("/api/agora/recording/stop", async (req, res) => {
       .status(400)
       .json({ error: "Missing channel or resource_id or sid or uid" });
 
-  const data = await stopCloudRecording(resource_id, channel, sid, uid);
-  console.log(data);
-  res.status(200).json(data);
+  const _uid = alphanumericToNumericUID(uid);
+
+  const data = await stopCloudRecording(resource_id, channel, sid, _uid);
+  console.log("data:", { ...data, uid: _uid });
+  res.status(200).json({ ...data, uid: _uid });
 });
 
 /**

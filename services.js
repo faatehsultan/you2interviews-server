@@ -8,6 +8,7 @@ const {
   AGORA_STOP_RECORDING_ENDPOINT,
 } = require("./constants");
 const { auth, db } = require("./firebase-config");
+const { getAgoraCloudRecordingStartConfig } = require("./utils");
 const RtcTokenBuilder =
   require("./agoraTokenLib/RtcTokenBuilder2").RtcTokenBuilder;
 const RtcRole = require("./agoraTokenLib/RtcTokenBuilder2").Role;
@@ -34,19 +35,16 @@ if (
   process.exit(1);
 }
 
-const getTokenWithUID = async (uid = 0, channelName = "*", role = "pub") => {
-  const resToken = RtcTokenBuilder.buildTokenWithUid(
-    appId,
-    appCertificate,
-    channelName,
-    uid,
-    roleMap[role],
-    AGORA_TOKEN_EXPIRY_SECONDS,
-    AGORA_TOKEN_EXPIRY_SECONDS
+const _getCredentials = () => {
+  return (
+    "Basic " +
+    Buffer.from(
+      process.env.AGORA_REST_KEY + ":" + process.env.AGORA_REST_SECRET
+    ).toString("base64")
   );
-  console.log("Token with int uid:", resToken);
+};
 
-  // also check if the requesting user is host
+const getTokenWithUID = async (uid = "0", channelName = "*") => {
   const allChannels = await getActiveChannelsList();
   const channelList = allChannels?.data?.channels
     ?.filter((c) => c?.user_count > 0)
@@ -56,22 +54,27 @@ const getTokenWithUID = async (uid = 0, channelName = "*", role = "pub") => {
 
   if (channelList?.includes(channelName)) is_host = false;
 
+  const resToken = RtcTokenBuilder.buildTokenWithUid(
+    appId,
+    appCertificate,
+    channelName,
+    uid,
+    roleMap[is_host ? "pub" : "sub"],
+    AGORA_TOKEN_EXPIRY_SECONDS,
+    AGORA_TOKEN_EXPIRY_SECONDS
+  );
+
   return { token: resToken, is_host };
 };
 
 const getActiveChannelsList = async () => {
   const url = AGORA_CHANNEL_LIST_ENDPOINT.replace("APP_ID", appId);
 
-  const encodedCredential =
-    "Basic " +
-    Buffer.from(
-      process.env.AGORA_REST_KEY + ":" + process.env.AGORA_REST_SECRET
-    ).toString("base64");
-
   const options = {
     method: "GET",
-    headers: { Authorization: encodedCredential, Accept: "application/json" },
+    headers: { Authorization: _getCredentials(), Accept: "application/json" },
   };
+
   try {
     let response = await fetch(url, options);
     const agoraData = await response.json();
@@ -93,6 +96,10 @@ const getActiveChannelsList = async () => {
       }
     });
 
+    console.log("agoraData", agoraData);
+    console.log("firebaseData", firebaseData);
+    console.log("resultant", resultant);
+
     return resultant;
   } catch (error) {
     console.error(error);
@@ -102,86 +109,19 @@ const getActiveChannelsList = async () => {
 const requestCloudRecording = async (channelName, token, uid) => {
   const url = AGORA_REQUEST_RECORDING_ENDPOINT.replace("APP_ID", appId);
 
-  const encodedCredential =
-    "Basic " +
-    Buffer.from(
-      process.env.AGORA_REST_KEY + ":" + process.env.AGORA_REST_SECRET
-    ).toString("base64");
-
   const options = {
     method: "POST",
     headers: {
-      Authorization: encodedCredential,
+      Authorization: _getCredentials(),
       "Content-Type": "application/json;charset=utf-8",
     },
     body: JSON.stringify({
       cname: channelName,
       uid: uid,
       clientRequest: {
-        // token: token,
         scene: 0,
         region: "EU",
-        resourceExpiredHour: 72,
-        startParameter: {
-          token: token,
-          storageConfig: {
-            vendor: 1,
-            region: 25,
-            bucket: process.env.AWS_S3_BUCKET_NAME,
-            accessKey: process.env.AWS_ACCESS_KEY_ID,
-            secretKey: process.env.AWS_SECRET_ACCESS_KEY,
-            // fileNamePrefix: ["directory1", "directory2"],
-          },
-          recordingConfig: {
-            channelType: 0,
-            decryptionMode: 0,
-            streamTypes: 0,
-            subscribeAudioUids: ["#allstream#"],
-            subscribeUidGroup: 1,
-            streamMode: "original",
-          },
-          recordingFileConfig: {
-            avFileType: ["hls"],
-          },
-          // extensionServiceConfig: {
-          //   errorHandlePolicy: "error_abort",
-          //   extensionServices: [
-          //     {
-          //       serviceName: "string",
-          //       errorHandlePolicy: "string",
-          //       serviceParam: {
-          //         url: "string",
-          //         audioProfile: 0,
-          //         videoWidth: 240,
-          //         videoHeight: 240,
-          //         maxRecordingHour: 1,
-          //         videoBitrate: 0,
-          //         videoFps: 15,
-          //         mobile: false,
-          //         maxVideoDuration: 120,
-          //         onhold: false,
-          //         readyTimeout: 0,
-          //       },
-          //     },
-          //   ],
-          // },
-          appsCollection: {
-            combinationPolicy: "default",
-          },
-          transcodeOptions: {
-            transConfig: {
-              transMode: "audioMix",
-            },
-            container: {
-              format: "mp3",
-            },
-            audio: {
-              sampleRate: "48000",
-              bitrate: "48000",
-              channels: "2",
-            },
-          },
-        },
+        startParameter: getAgoraCloudRecordingStartConfig(token, uid),
       },
     }),
   };
@@ -205,87 +145,16 @@ const startCloudRecording = async (resourceId, channelName, token, uid) => {
     resourceId
   );
 
-  const encodedCredential =
-    "Basic " +
-    Buffer.from(
-      process.env.AGORA_REST_KEY + ":" + process.env.AGORA_REST_SECRET
-    ).toString("base64");
-
   const options = {
     method: "POST",
     headers: {
-      Authorization: encodedCredential,
+      Authorization: _getCredentials(),
       "Content-Type": "application/json;charset=utf-8",
     },
     body: JSON.stringify({
       cname: channelName,
       uid: uid,
-      clientRequest: {
-        token: token,
-        scene: 0,
-        region: "EU",
-        resourceExpiredHour: 72,
-        startParameter: {
-          token: token,
-          storageConfig: {
-            vendor: 1,
-            region: 25,
-            bucket: process.env.AWS_S3_BUCKET_NAME,
-            accessKey: process.env.AWS_ACCESS_KEY_ID,
-            secretKey: process.env.AWS_SECRET_ACCESS_KEY,
-            // fileNamePrefix: ["directory1", "directory2"],
-          },
-          recordingConfig: {
-            channelType: 0,
-            decryptionMode: 0,
-            streamTypes: 0,
-            subscribeAudioUids: ["#allstream#"],
-            subscribeUidGroup: 1,
-            streamMode: "original",
-          },
-          recordingFileConfig: {
-            avFileType: ["hls"],
-          },
-          // extensionServiceConfig: {
-          //   errorHandlePolicy: "error_abort",
-          //   extensionServices: [
-          //     {
-          //       serviceName: "string",
-          //       errorHandlePolicy: "string",
-          //       serviceParam: {
-          //         url: "string",
-          //         audioProfile: 0,
-          //         videoWidth: 240,
-          //         videoHeight: 240,
-          //         maxRecordingHour: 1,
-          //         videoBitrate: 0,
-          //         videoFps: 15,
-          //         mobile: false,
-          //         maxVideoDuration: 120,
-          //         onhold: false,
-          //         readyTimeout: 0,
-          //       },
-          //     },
-          //   ],
-          // },
-          appsCollection: {
-            combinationPolicy: "default",
-          },
-          transcodeOptions: {
-            transConfig: {
-              transMode: "audioMix",
-            },
-            container: {
-              format: "mp3",
-            },
-            audio: {
-              sampleRate: "48000",
-              bitrate: "48000",
-              channels: "2",
-            },
-          },
-        },
-      },
+      clientRequest: getAgoraCloudRecordingStartConfig(token, uid),
     }),
   };
   try {
