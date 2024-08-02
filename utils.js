@@ -18,10 +18,11 @@ const getAgoraCloudRecordingStartConfig = (token, uid) => ({
     secretKey: process.env.AWS_SECRET_ACCESS_KEY,
   },
   recordingConfig: {
-    channelType: 1,
+    maxIdleTime: 30,
+    channelType: 0,
     streamTypes: 0,
-    subscribeAudioUids: [uid],
-    subscribeUidGroup: 3,
+    subscribeAudioUids: ["#allstream#"],
+    subscribeUidGroup: 0,
     streamMode: "original",
   },
   // recordingFileConfig: {

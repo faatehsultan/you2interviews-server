@@ -1,6 +1,6 @@
 const AGORA_TOKEN_EXPIRY_SECONDS = 3600 * 24;
 
-const AGORA_BASE_URL = "https://api.sd-rtn.com";
+const AGORA_BASE_URL = "https://api.agora.io";
 
 const AGORA_CHANNEL_LIST_ENDPOINT = `${AGORA_BASE_URL}/dev/v1/channel/APP_ID?page_size=500`;
 
@@ -16,7 +16,14 @@ const SWAGGER_OPTIONS = {
       version: "1.0.0",
     },
     servers: [
-      { url: "http://localhost:3000", description: "Development Server" },
+      {
+        url: "http://localhost:4000",
+        description: "Development Server (Local)",
+      },
+      {
+        url: "https://maggot-sound-evidently.ngrok-free.app",
+        description: "Development Server (ngrok)",
+      },
       {
         url: "https://allowed-iguana-tops.ngrok-free.app",
         description: "Production Server",

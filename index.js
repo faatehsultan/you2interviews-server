@@ -17,6 +17,8 @@ const {
 const { SWAGGER_OPTIONS } = require("./constants");
 const { alphanumericToNumericUID } = require("./utils");
 
+const log = require("./logger");
+
 const app = express();
 const server = http.createServer(app);
 
@@ -67,8 +69,7 @@ app.get("/api/agora/token/new", async (req, res) => {
   const _uid = alphanumericToNumericUID(uid);
 
   const data = await getTokenWithUID(_uid, channel);
-  console.log("data:", { ...data, uid: _uid });
-  res.status(200).json({ ...data, uid: _uid });
+  log(res, data);
 });
 
 /**
@@ -91,7 +92,7 @@ app.get("/api/agora/token/new", async (req, res) => {
  */
 app.get("/api/agora/channel/list", async (req, res) => {
   const channelList = await getActiveChannelsList();
-  res.status(200).json({ channels: channelList });
+  log(res, { channels: channelList });
 });
 
 /**
@@ -140,8 +141,7 @@ app.get("/api/agora/recording/request", async (req, res) => {
   const _uid = alphanumericToNumericUID(uid);
 
   const data = await requestCloudRecording(channel, token, _uid);
-  console.log("data:", { ...data, uid: _uid });
-  res.status(200).json({ ...data, uid: _uid });
+  log(res, { ...data, uid: _uid });
 });
 
 /**
@@ -197,8 +197,7 @@ app.get("/api/agora/recording/start", async (req, res) => {
   const _uid = alphanumericToNumericUID(uid);
 
   const data = await startCloudRecording(resource_id, channel, token, _uid);
-  console.log("data:", { ...data, uid: _uid });
-  res.status(200).json({ ...data, uid: _uid });
+  log(res, { ...data, uid: _uid });
 });
 
 /**
@@ -254,8 +253,7 @@ app.get("/api/agora/recording/stop", async (req, res) => {
   const _uid = alphanumericToNumericUID(uid);
 
   const data = await stopCloudRecording(resource_id, channel, sid, _uid);
-  console.log("data:", { ...data, uid: _uid });
-  res.status(200).json({ ...data, uid: _uid });
+  log(res, { ...data, uid: _uid });
 });
 
 /**
@@ -273,8 +271,7 @@ app.get("/api/agora/recording/stop", async (req, res) => {
  */
 app.get("/api/users/list", async (req, res) => {
   const data = await listAllUsers();
-
-  res.status(200).json(data);
+  log(res, data);
 });
 
 /**
@@ -304,10 +301,9 @@ app.get("/api/channel/new/", async (req, res) => {
   const { channel, uid } = req.query;
 
   const data = await addNewChannel(channel, uid);
-
-  res.status(200).json(data);
+  log(res, data);
 });
 
-server.listen(3000, () => {
+server.listen(4000, () => {
   console.log("Server listening on port 3000");
 });

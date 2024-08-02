@@ -12,6 +12,7 @@
   "description": "",
   "dependencies": {
     "agora-token": "^2.0.3",
+    "bunyan": "^1.8.15",
     "cors": "^2.8.5",
     "crc-32": "^1.2.2",
     "cuint": "^0.2.2",
