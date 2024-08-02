@@ -10,14 +10,16 @@ const logFilePath = path.join(
   `${new Date().toISOString().slice(0, 10)}.log`
 );
 
-const logger = bunyan.createLogger({
-  name: "you2interviews-server",
-  streams: [
-    {
-      path: logFilePath,
-    },
-  ],
-});
+// const logger = bunyan.createLogger({
+//   name: "you2interviews-server",
+//   streams: [
+//     {
+//       path: logFilePath,
+//     },
+//   ],
+// });
+
+const logger = console;
 
 class BaseLogger {
   constructor(res, resJson, resStatus = 200) {
