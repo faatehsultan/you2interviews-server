@@ -6,9 +6,13 @@ const {
   AGORA_TOKEN_EXPIRY_SECONDS,
   AGORA_START_RECORDING_ENDPOINT,
   AGORA_STOP_RECORDING_ENDPOINT,
+  AGORA_CHANNEL_USER_LIST_ENDPOINT,
 } = require("./constants");
 const { auth, db } = require("./firebase-config");
-const { getAgoraCloudRecordingStartConfig } = require("./utils");
+const {
+  getAgoraCloudRecordingStartConfig,
+  alphanumericToNumericUID,
+} = require("./utils");
 const RtcTokenBuilder =
   require("./agoraTokenLib/RtcTokenBuilder2").RtcTokenBuilder;
 const RtcRole = require("./agoraTokenLib/RtcTokenBuilder2").Role;
@@ -96,17 +100,33 @@ const getActiveChannelsList = async () => {
       }
     });
 
-    console.log("agoraData", agoraData);
-    console.log("firebaseData", firebaseData);
-    console.log("resultant", resultant);
-
     return resultant;
   } catch (error) {
     console.error(error);
   }
 };
 
-const requestCloudRecording = async (channelName, token, uid) => {
+const getActiveUsersInChannel = async (channelName) => {
+  const url = AGORA_CHANNEL_USER_LIST_ENDPOINT.replace("APP_ID", appId).replace(
+    "CHANNEL_NAME",
+    channelName
+  );
+
+  const options = {
+    method: "GET",
+    headers: { Authorization: _getCredentials(), Accept: "application/json" },
+  };
+
+  try {
+    let response = await fetch(url, options);
+
+    return await response.json();
+  } catch (error) {
+    console.error(error);
+  }
+};
+
+const requestCloudRecording = async (channelName, token, uid, targetUid) => {
   const url = AGORA_REQUEST_RECORDING_ENDPOINT.replace("APP_ID", appId);
 
   const options = {
@@ -121,7 +141,7 @@ const requestCloudRecording = async (channelName, token, uid) => {
       clientRequest: {
         scene: 0,
         region: "EU",
-        startParameter: getAgoraCloudRecordingStartConfig(token, uid),
+        startParameter: getAgoraCloudRecordingStartConfig(token, targetUid),
       },
     }),
   };
@@ -129,17 +149,19 @@ const requestCloudRecording = async (channelName, token, uid) => {
     const response = await fetch(url, options);
     const data = await response.json();
 
-    console.log(response);
-    console.log(data);
-    console.log(response.status, response.statusText);
-
     return data;
   } catch (error) {
     console.error(error);
   }
 };
 
-const startCloudRecording = async (resourceId, channelName, token, uid) => {
+const startCloudRecording = async (
+  resourceId,
+  channelName,
+  token,
+  uid,
+  targetUid
+) => {
   const url = AGORA_START_RECORDING_ENDPOINT.replace("APP_ID", appId).replace(
     "RESOURCE_ID",
     resourceId
@@ -154,17 +176,12 @@ const startCloudRecording = async (resourceId, channelName, token, uid) => {
     body: JSON.stringify({
       cname: channelName,
       uid: uid,
-      clientRequest: getAgoraCloudRecordingStartConfig(token, uid),
+      clientRequest: getAgoraCloudRecordingStartConfig(token, targetUid),
     }),
   };
   try {
-    console.log("stuff>>>>", options, url);
     const response = await fetch(url, options);
     const data = await response.json();
-
-    console.log(response);
-    console.log(data);
-    console.log(response.status, response.statusText);
 
     return data;
   } catch (error) {
@@ -200,10 +217,6 @@ const stopCloudRecording = async (resourceId, channelName, sid, uid) => {
   try {
     const response = await fetch(url, options);
     const data = await response.json();
-
-    console.log(response);
-    console.log(data);
-    console.log(response.status, response.statusText);
 
     return data;
   } catch (error) {
@@ -252,12 +265,89 @@ const addNewChannel = async (channelName, hostUid) => {
   }
 };
 
+const autoStartCloudRecording = async (channelName, targetUid_) => {
+  const targetUid = targetUid_?.toString() || targetUid_;
+
+  // step 1 - get all users
+  const users = await listAllUsers();
+  console.log("users", users);
+
+  // step 2 - map all uids to agora compatible integers
+  const uids = users.map((user) => alphanumericToNumericUID(user.uid));
+  console.log("uids", uids);
+
+  // step 3 - generate a random uid to be used for recording requester which is not in uids
+  let requesterUid = Math.floor(Math.random() * 10000);
+  while (uids.includes(requesterUid)) {
+    requesterUid = Math.floor(Math.random() * 10000);
+  }
+  requesterUid = requesterUid.toString();
+  console.log("requesterUid", requesterUid);
+
+  // step 4 - get token for requester
+  const { token: requesterToken } = await getTokenWithUID(
+    requesterUid,
+    channelName
+  );
+  console.log("requesterToken", requesterToken);
+
+  // step 5 - check if target user has already joined the channel
+  const channelUsers = await getActiveUsersInChannel(channelName);
+  console.log("channelUsers", channelUsers);
+  if (
+    !channelUsers?.data?.channel_exist ||
+    !channelUsers?.data?.users?.includes(parseInt(targetUid))
+  ) {
+    console.log("user does not exists in the channel, failure");
+    return null;
+  }
+  console.log("user exists in the channel, success");
+
+  // step 6 - request recording
+  const recordingResource = await requestCloudRecording(
+    channelName,
+    requesterToken,
+    requesterUid,
+    targetUid
+  );
+  console.log("recordingResource", recordingResource);
+
+  // step 7 - start recording
+  const recordingSid = await startCloudRecording(
+    recordingResource.resourceId,
+    channelName,
+    requesterToken,
+    requesterUid,
+    targetUid
+  );
+  console.log("recordingSid", recordingSid);
+
+  // step 8 - prepare data to return
+  try {
+    const resultant = {};
+    resultant["resourceId"] = recordingResource.resourceId;
+    resultant["sid"] = recordingSid?.sid;
+    resultant["cname"] = recordingSid?.cname;
+    resultant["requesterUid"] = requesterUid;
+    resultant["requesterToken"] = requesterToken;
+    resultant["targetUid"] = targetUid;
+
+    return resultant;
+  } catch (error) {
+    console.error(error);
+  }
+
+  return null;
+};
+
 module.exports = {
   getTokenWithUID,
   getActiveChannelsList,
+  getActiveUsersInChannel,
   requestCloudRecording,
   startCloudRecording,
   stopCloudRecording,
   listAllUsers,
   addNewChannel,
+  autoStartCloudRecording,
 };

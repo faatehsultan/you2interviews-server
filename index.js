@@ -13,9 +13,10 @@ const {
   stopCloudRecording,
   listAllUsers,
   addNewChannel,
+  autoStartCloudRecording,
+  getActiveUsersInChannel,
 } = require("./services");
 const { SWAGGER_OPTIONS } = require("./constants");
-const { alphanumericToNumericUID } = require("./utils");
 
 const log = require("./logger");
 
@@ -66,9 +67,7 @@ app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpecs));
 app.get("/api/agora/token/new", async (req, res) => {
   const { uid, channel } = req.query;
 
-  const _uid = alphanumericToNumericUID(uid);
-
-  const data = await getTokenWithUID(_uid, channel);
+  const data = await getTokenWithUID(uid, channel);
   log(res, data);
 });
 
@@ -93,6 +92,39 @@ app.get("/api/agora/token/new", async (req, res) => {
 app.get("/api/agora/channel/list", async (req, res) => {
   const channelList = await getActiveChannelsList();
   log(res, { channels: channelList });
+});
+
+/**
+ * @swagger
+ * /api/agora/channel/users/list:
+ *   get:
+ *     summary: Get the list of active users in a channel
+ *     parameters:
+ *       - in: query
+ *         name: channel
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: A JSON object containing the list of active users in a channel
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 channels:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ */
+app.get("/api/agora/channel/users/list", async (req, res) => {
+  const { channel } = req.query;
+
+  if (!channel) return res.status(400).json({ error: "Missing channel" });
+
+  const data = await getActiveUsersInChannel(channel);
+  log(res, data);
 });
 
 /**
@@ -134,14 +166,12 @@ app.get("/api/agora/channel/list", async (req, res) => {
  *                   type: string
  */
 app.get("/api/agora/recording/request", async (req, res) => {
-  const { channel, token, uid } = req.query;
+  const { channel, token, uid, target_uid } = req.query;
   if (!channel || !token || !uid)
     return res.status(400).json({ error: "Missing channel or token or uid" });
 
-  const _uid = alphanumericToNumericUID(uid);
-
-  const data = await requestCloudRecording(channel, token, _uid);
-  log(res, { ...data, uid: _uid });
+  const data = await requestCloudRecording(channel, token, uid, target_uid);
+  log(res, { ...data, uid: uid });
 });
 
 /**
@@ -188,16 +218,20 @@ app.get("/api/agora/recording/request", async (req, res) => {
  *                   type: string
  */
 app.get("/api/agora/recording/start", async (req, res) => {
-  const { channel, resource_id, token, uid } = req.query;
+  const { channel, resource_id, token, uid, target_uid } = req.query;
   if (!channel || !resource_id || !token || !uid)
     return res
       .status(400)
       .json({ error: "Missing channel or resource_id or token or uid" });
 
-  const _uid = alphanumericToNumericUID(uid);
-
-  const data = await startCloudRecording(resource_id, channel, token, _uid);
-  log(res, { ...data, uid: _uid });
+  const data = await startCloudRecording(
+    resource_id,
+    channel,
+    token,
+    uid,
+    target_uid
+  );
+  log(res, { ...data, uid: uid });
 });
 
 /**
@@ -250,10 +284,8 @@ app.get("/api/agora/recording/stop", async (req, res) => {
       .status(400)
       .json({ error: "Missing channel or resource_id or sid or uid" });
 
-  const _uid = alphanumericToNumericUID(uid);
-
-  const data = await stopCloudRecording(resource_id, channel, sid, _uid);
-  log(res, { ...data, uid: _uid });
+  const data = await stopCloudRecording(resource_id, channel, sid, uid);
+  log(res, { ...data, uid: uid });
 });
 
 /**
@@ -301,6 +333,36 @@ app.get("/api/channel/new/", async (req, res) => {
   const { channel, uid } = req.query;
 
   const data = await addNewChannel(channel, uid);
+  log(res, data);
+});
+
+/**
+ * @swagger
+ * /api/recording/automate:
+ *   get:
+ *     summary: Automate cloud recording, call this endpoint when user successfully joined the channel from the mobile device. Here uid is the target uid to be recorded (not the one used for recording request).
+ *     parameters:
+ *       - in: query
+ *         name: channel
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: uid
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ */
+app.get("/api/agora/recording/automate/", async (req, res) => {
+  const { channel, uid } = req.query;
+
+  const data = await autoStartCloudRecording(channel, uid);
   log(res, data);
 });
 

@@ -1,14 +1,9 @@
 const crc32 = require("crc-32");
 
-const alphanumericToNumericUID = (alphanumericUID) => {
-  // if (alphanumericUID === "0") return "0";
+const alphanumericToNumericUID = (alphanumericUID) =>
+  alphanumericUID === "0" ? "0" : crc32.str(alphanumericUID) >>> 0;
 
-  // return crc32.str(alphanumericUID) >>> 0;
-
-  return alphanumericUID;
-};
-
-const getAgoraCloudRecordingStartConfig = (token, uid) => ({
+const getAgoraCloudRecordingStartConfig = (token, targetUid) => ({
   token: token,
   storageConfig: {
     vendor: 1,
@@ -21,7 +16,7 @@ const getAgoraCloudRecordingStartConfig = (token, uid) => ({
     maxIdleTime: 30,
     channelType: 0,
     streamTypes: 0,
-    subscribeAudioUids: ["#allstream#"],
+    subscribeAudioUids: targetUid ? [targetUid] : ["#allstream#"],
     subscribeUidGroup: 0,
     streamMode: "original",
   },
