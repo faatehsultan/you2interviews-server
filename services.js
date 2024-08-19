@@ -227,14 +227,16 @@ const stopCloudRecording = async (resourceId, channelName, sid, uid) => {
 const listAllUsers = async (nextPageToken) => {
   try {
     const listUsersResult = await auth.listUsers(1000, nextPageToken);
-    const users = listUsersResult.users.map((userRecord) => ({
-      uid: userRecord.uid,
-      displayName: userRecord.displayName,
-      email: userRecord.email,
-      emailVerified: userRecord.emailVerified,
-      disabled: userRecord.disabled,
-      photoURL: userRecord.photoURL,
-    }));
+    const users = listUsersResult.users
+      .filter((userRecord) => !userRecord.customClaims?.admin)
+      .map((userRecord) => ({
+        uid: userRecord.uid,
+        displayName: userRecord.displayName,
+        email: userRecord.email,
+        emailVerified: userRecord.emailVerified,
+        disabled: userRecord.disabled,
+        photoURL: userRecord.photoURL,
+      }));
     if (listUsersResult.pageToken) {
       // List next batch of users.
       const nextUsers = await listAllUsers(listUsersResult.pageToken);
@@ -244,6 +246,32 @@ const listAllUsers = async (nextPageToken) => {
   } catch (error) {
     console.log("Error listing users:", error);
     return [];
+  }
+};
+
+const createAdminUser = async (email, password) => {
+  try {
+    const userRecord = await auth.createUser({
+      email: email,
+      password: password,
+    });
+    auth.setCustomUserClaims(userRecord.uid, {
+      admin: true,
+    });
+    return userRecord;
+  } catch (error) {
+    console.log("Error creating admin user:", error);
+    return { error: error };
+  }
+};
+
+const isUserAdmin = async (email) => {
+  try {
+    const userRecord = await auth.getUserByEmail(email);
+    return userRecord?.customClaims?.admin;
+  } catch (error) {
+    console.log("Error fetching admin user:", error);
+    return { error: error };
   }
 };
 
@@ -348,6 +376,8 @@ module.exports = {
   startCloudRecording,
   stopCloudRecording,
   listAllUsers,
+  createAdminUser,
+  isUserAdmin,
   addNewChannel,
   autoStartCloudRecording,
 };

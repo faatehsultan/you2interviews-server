@@ -15,6 +15,8 @@ const {
   addNewChannel,
   autoStartCloudRecording,
   getActiveUsersInChannel,
+  createAdminUser,
+  isUserAdmin,
 } = require("./services");
 const { SWAGGER_OPTIONS } = require("./constants");
 
@@ -303,6 +305,59 @@ app.get("/api/agora/recording/stop", async (req, res) => {
  */
 app.get("/api/users/list", async (req, res) => {
   const data = await listAllUsers();
+  log(res, data);
+});
+
+/**
+ * @swagger
+ * /api/users/admin/new:
+ *   post:
+ *     summary: Create new admin user
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ */
+app.post("/api/users/admin/new", async (req, res) => {
+  const { email, password } = req.body;
+  const data = await createAdminUser(email, password);
+  log(res, data);
+});
+
+/**
+ * @swagger
+ * /api/users/admin/verify:
+ *   get:
+ *     summary: Check if user is admin
+ *     parameters:
+ *       - in: query
+ *         name: email
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ */
+app.get("/api/users/admin/verify", async (req, res) => {
+  const { email } = req.query;
+  const data = await isUserAdmin(email);
   log(res, data);
 });
 
