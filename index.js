@@ -17,6 +17,7 @@ const {
   getActiveUsersInChannel,
   createAdminUser,
   isUserAdmin,
+  getRecordedChannelsList,
 } = require("./services");
 const { SWAGGER_OPTIONS } = require("./constants");
 
@@ -93,7 +94,7 @@ app.get("/api/agora/token/new", async (req, res) => {
  */
 app.get("/api/agora/channel/list", async (req, res) => {
   const channelList = await getActiveChannelsList();
-  log(res, { channels: channelList });
+  log(res, { ...channelList });
 });
 
 /**

@@ -12,6 +12,7 @@ const { auth, db } = require("./firebase-config");
 const {
   getAgoraCloudRecordingStartConfig,
   alphanumericToNumericUID,
+  getS3BucketFilesList,
 } = require("./utils");
 const RtcTokenBuilder =
   require("./agoraTokenLib/RtcTokenBuilder2").RtcTokenBuilder;
@@ -89,18 +90,32 @@ const getActiveChannelsList = async () => {
       channel_name: doc.id,
     }));
 
-    const resultant = [];
+    const bucketFilesList = await getS3BucketFilesList();
+
+    const liveChannels = [];
+    const recordedChannels = [];
 
     firebaseData?.forEach((channel) => {
       const elem = agoraData?.data?.channels?.find(
         (c) => c.channel_name === channel.channel_name
       );
       if (elem) {
-        resultant.push({ ...channel, ...elem });
+        liveChannels.push({ ...channel, ...elem });
       }
+
+      bucketFilesList?.forEach((file) => {
+        if (
+          recordedChannels.findIndex(
+            (c) => c.channel_name === channel.channel_name
+          ) === -1 &&
+          file.includes(channel.channel_name)
+        ) {
+          recordedChannels.push(channel);
+        }
+      });
     });
 
-    return resultant;
+    return { live: liveChannels, recorded: recordedChannels };
   } catch (error) {
     console.error(error);
   }

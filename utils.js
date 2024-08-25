@@ -1,4 +1,31 @@
 const crc32 = require("crc-32");
+const AWS = require("aws-sdk");
+
+// Configure AWS SDK with your environment variables
+AWS.config.update({
+  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  region: process.env.AWS_REGION,
+});
+
+const s3 = new AWS.S3();
+
+async function getS3BucketFilesList() {
+  const bucketName = process.env.AWS_S3_BUCKET_NAME;
+
+  const params = {
+    Bucket: bucketName,
+  };
+
+  try {
+    const data = await s3.listObjectsV2(params).promise();
+    const files = data.Contents.map((item) => item.Key);
+    return files;
+  } catch (error) {
+    console.error("Error fetching file list:", error);
+    throw error;
+  }
+}
 
 const alphanumericToNumericUID = (alphanumericUID) =>
   alphanumericUID === "0" ? "0" : crc32.str(alphanumericUID) >>> 0;
@@ -65,6 +92,7 @@ const getAgoraCloudRecordingStartConfig = (token, targetUid) => ({
 });
 
 module.exports = {
+  getS3BucketFilesList,
   alphanumericToNumericUID,
   getAgoraCloudRecordingStartConfig,
 };
