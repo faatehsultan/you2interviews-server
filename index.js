@@ -17,7 +17,7 @@ const {
   getActiveUsersInChannel,
   createAdminUser,
   isUserAdmin,
-  getRecordedChannelsList,
+  getCloudMp3ByChannelId,
 } = require("./services");
 const { SWAGGER_OPTIONS } = require("./constants");
 
@@ -94,7 +94,7 @@ app.get("/api/agora/token/new", async (req, res) => {
  */
 app.get("/api/agora/channel/list", async (req, res) => {
   const channelList = await getActiveChannelsList();
-  log(res, { ...channelList });
+  res.status(200).json({ ...channelList });
 });
 
 /**
@@ -419,6 +419,31 @@ app.get("/api/agora/recording/automate/", async (req, res) => {
   const { channel, uid } = req.query;
 
   const data = await autoStartCloudRecording(channel, uid);
+  log(res, data);
+});
+
+/**
+ * @swagger
+ * /api/channel/mp3/:
+ *   get:
+ *     summary: Get list of files in a recorded channel
+ *     parameters:
+ *       - in: query
+ *         name: channel
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ */
+app.get("/api/channel/mp3/", async (req, res) => {
+  const { channel } = req.query;
+
+  const data = await getCloudMp3ByChannelId(channel);
   log(res, data);
 });
 

@@ -10,7 +10,7 @@ AWS.config.update({
 
 const s3 = new AWS.S3();
 
-async function getS3BucketFilesList() {
+async function getS3BucketFilesList(channelName = null) {
   const bucketName = process.env.AWS_S3_BUCKET_NAME;
 
   const params = {
@@ -19,7 +19,16 @@ async function getS3BucketFilesList() {
 
   try {
     const data = await s3.listObjectsV2(params).promise();
-    const files = data.Contents.map((item) => item.Key);
+    let files = data.Contents.map((item) => ({
+      key: item.Key,
+      url: s3.getSignedUrl("getObject", {
+        Bucket: bucketName,
+        Key: item.Key,
+      }),
+    }));
+    if (channelName) {
+      files = files.filter((file) => file.key.includes(channelName));
+    }
     return files;
   } catch (error) {
     console.error("Error fetching file list:", error);

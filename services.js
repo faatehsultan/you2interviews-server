@@ -14,6 +14,7 @@ const {
   alphanumericToNumericUID,
   getS3BucketFilesList,
 } = require("./utils");
+const { processRecordingConversion } = require("./file-service");
 const RtcTokenBuilder =
   require("./agoraTokenLib/RtcTokenBuilder2").RtcTokenBuilder;
 const RtcRole = require("./agoraTokenLib/RtcTokenBuilder2").Role;
@@ -90,7 +91,7 @@ const getActiveChannelsList = async () => {
       channel_name: doc.id,
     }));
 
-    const bucketFilesList = await getS3BucketFilesList();
+    const bucketFilesList = (await getS3BucketFilesList()).map((i) => i.key);
 
     const liveChannels = [];
     const recordedChannels = [];
@@ -231,9 +232,26 @@ const stopCloudRecording = async (resourceId, channelName, sid, uid) => {
   };
   try {
     const response = await fetch(url, options);
+    const status = response.status;
     const data = await response.json();
 
-    return data;
+    if (status !== 200) {
+      throw data;
+    } else {
+      const channelFileList = (await getS3BucketFilesList(channelName)).map(
+        (i) => i.url
+      );
+      const conversionRes = await processRecordingConversion(
+        channelFileList,
+        channelName
+      );
+
+      if (conversionRes) {
+        return data;
+      } else {
+        throw data;
+      }
+    }
   } catch (error) {
     console.error(error);
   }
@@ -383,6 +401,12 @@ const autoStartCloudRecording = async (channelName, targetUid_) => {
   return null;
 };
 
+const getCloudMp3ByChannelId = async (channelId) => {
+  return (await getS3BucketFilesList(channelId)).find((i) =>
+    i.key.endsWith(".mp3")
+  );
+};
+
 module.exports = {
   getTokenWithUID,
   getActiveChannelsList,
@@ -395,4 +419,5 @@ module.exports = {
   isUserAdmin,
   addNewChannel,
   autoStartCloudRecording,
+  getCloudMp3ByChannelId,
 };
