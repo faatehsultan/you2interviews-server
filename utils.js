@@ -21,10 +21,7 @@ async function getS3BucketFilesList(channelName = null) {
     const data = await s3.listObjectsV2(params).promise();
     let files = data.Contents.map((item) => ({
       key: item.Key,
-      url: s3.getSignedUrl("getObject", {
-        Bucket: bucketName,
-        Key: item.Key,
-      }),
+      url: `https://${bucketName}.s3.${process.env.AWS_REGION}.amazonaws.com/${item.Key}`,
     }));
     if (channelName) {
       files = files.filter((file) => file.key.includes(channelName));
