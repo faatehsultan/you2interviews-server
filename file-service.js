@@ -78,7 +78,8 @@ const convertM3U8ToMp3 = (m3u8FilePath, outputFilePath) => {
 
 const processRecordingConversion = async (channelFileUrls, channelName) => {
   const bucketName = process.env.AWS_S3_BUCKET_NAME;
-  const outputMp3 = "/tmp/" + channelName + ".mp3";
+  const outputMp3 =
+    (process.env.TEMP_MP3_LOCAL_PATH || "/tmp") + "/" + channelName + ".mp3";
   const localTsFiles = [];
 
   try {
