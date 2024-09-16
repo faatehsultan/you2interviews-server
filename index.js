@@ -18,6 +18,7 @@ const {
   createAdminUser,
   isUserAdmin,
   getCloudMp3ByChannelId,
+  updateUserData,
 } = require("./services");
 const { SWAGGER_OPTIONS } = require("./constants");
 
@@ -306,6 +307,53 @@ app.get("/api/agora/recording/stop", async (req, res) => {
  */
 app.get("/api/users/list", async (req, res) => {
   const data = await listAllUsers();
+  log(res, data);
+});
+
+/**
+ * @swagger
+ * /api/users/update/{uid}:
+ *   post:
+ *     summary: Update a user
+ *     parameters:
+ *       - in: path
+ *         name: uid
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *               name:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: A JSON object containing updated user data
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ */
+app.post("/api/users/update/:uid", async (req, res) => {
+  const { uid } = req.params;
+  if (!uid) return res.status(400).json({ error: "Missing uid" });
+
+  const { email, password, name } = req.body;
+
+  const data = await updateUserData(
+    uid,
+    name ?? undefined,
+    email ?? undefined,
+    password ?? undefined
+  );
   log(res, data);
 });
 

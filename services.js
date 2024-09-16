@@ -407,6 +407,27 @@ const getCloudMp3ByChannelId = async (channelId) => {
   );
 };
 
+const updateUserData = async (
+  uid,
+  newName = undefined,
+  newEmail = undefined,
+  newPassword = undefined
+) => {
+  try {
+    let userRecord =
+      newName && (await auth.updateUser(uid, { displayName: newName }));
+    userRecord =
+      newEmail && (await auth.updateUser(uid, { displayName: newEmail }));
+    userRecord =
+      newPassword && (await auth.updateUser(uid, { displayName: newPassword }));
+
+    return userRecord;
+  } catch (error) {
+    console.log("Error updating user data:", error);
+    return { error: error };
+  }
+};
+
 module.exports = {
   getTokenWithUID,
   getActiveChannelsList,
@@ -420,4 +441,5 @@ module.exports = {
   addNewChannel,
   autoStartCloudRecording,
   getCloudMp3ByChannelId,
+  updateUserData,
 };
